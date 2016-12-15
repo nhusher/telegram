@@ -1,5 +1,5 @@
 let server = require('http').createServer()
-let WebSocketServer = require('ws').Server
+// let WebSocketServer = require('ws').Server
 let express = require('express')
 let bodyParser = require('body-parser')
 let path = require('path')
@@ -7,14 +7,14 @@ let RtcSocket = require('./RtcSocket')
 
 let PORT = process.env.PORT || '8081'
 
-let wss = new WebSocketServer({ server })
+// let wss = new WebSocketServer({ server })
+// wss.on('connection', ws => {
+//   console.log('connected', ws)
+// })
+
 let app = express()
 
 let connections = {}
-
-wss.on('connection', ws => {
-  console.log('connected', ws)
-})
 
 app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, '..', 'assets')))
@@ -33,11 +33,12 @@ app.post('/ice-candidate/:sesId', (req, res) => {
 })
 
 app.post('/offer/:sesId', (req, res) => {
-  let socket = new RtcSocket()
+  let socket = new RtcSocket({'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]})
   connections[req.params.sesId] = socket
 
   socket.on('message', msg => {
     console.log(msg)
+    socket.send(msg.channel, msg.data)
   })
 
   socket.receiveOffer(req.body).then(answer => {
