@@ -3,6 +3,8 @@ let RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnecti
 let RTCSessionDescription = window.RTCSessionDescription
 let RTCIceCandidate = window.RTCIceCandidate
 
+// Create a fake version of EventEmitter for the browser.
+// Based on <https://www.npmjs.com/package/eventemitter-light>
 class EventEmitter {
   constructor () {
     this.events = {}
@@ -16,14 +18,13 @@ class EventEmitter {
 
   removeListener (ev, handler) {
     let array = this.events[ev]
-
-    array && array.splice(array.indexOf(handler), 1)
+    if (array) array.splice(array.indexOf(handler), 1)
   }
 
   emit (ev, ...args) {
     let array = this.events[ev] || []
 
-    for (var i = 0, len = array.length; i < len; i++) {
+    for (let i = 0, len = array.length; i < len; i++) {
       array[i].apply(this, args)
     }
   }
