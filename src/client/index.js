@@ -28,8 +28,19 @@ function sendOffer (offer) {
 let config = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]}
 let rtcSocket = new RtcSocket(config)
 
-rtcSocket.createChannel('test')
+rtcSocket.createChannel('test', {
+  ordered: false,
+  maxPacketLifetime: 750
+})
 rtcSocket.on('icecandidate', sendCandidate)
+rtcSocket.on('close', () => console.log("CLOSED!"))
 rtcSocket.createOffer(sendOffer).then(() => console.log(rtcSocket))
+
+let text = document.querySelector('#text')
+let ping = document.querySelector('#ping')
+
+ping.onclick = () => {
+  rtcSocket.send('test', text.value)
+}
 
 window.sock = rtcSocket

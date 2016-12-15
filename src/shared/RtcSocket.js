@@ -19,28 +19,12 @@ module.exports = function (RTCPeerConnection, RTCSessionDescription, RTCIceCandi
 
       on(pc, 'iceconnectionstatechange', e => {
         if (pc.iceConnectionState === 'disconnected') {
-          this.emit('closed')
+          this.emit('close')
         }
       })
 
       on(pc, 'datachannel', event => {
-        let dataChannel = event.channel
-
-        console.log('recv datachannel', event.channel.label)
-        on(dataChannel, 'open', () => {
-          console.info(`Data channel [${dataChannel.label}] opened.`)
-          this.channels[dataChannel.label] = dataChannel
-        })
-        on(dataChannel, 'close', () => {
-          console.info(`Data channel [${dataChannel.label}] closed.`)
-          delete this.channels[dataChannel.label]
-        })
-        on(dataChannel, 'message', event => {
-          this.emit('message', {
-            channel: dataChannel.label,
-            data: event.data
-          })
-        })
+        this._addChannel(event.channel)
       })
     }
 
@@ -72,11 +56,27 @@ module.exports = function (RTCPeerConnection, RTCSessionDescription, RTCIceCandi
       return this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
     }
 
-    createChannel (name) {
-      let pc = this.peerConnection
-      let dc = pc.createDataChannel(name)
+    createChannel (name, config) {
+      this._addChannel(this.peerConnection.createDataChannel(name, config))
+    }
 
-      this.channels[name] = dc
+    _addChannel (dc) {
+      console.log('recv datachannel', dc.label)
+      this.channels[dc.label] = dc
+
+      on(dc, 'open', () => {
+        console.info(`Data channel [${dc.label}] opened.`)
+      })
+      on(dc, 'close', () => {
+        console.info(`Data channel [${dc.label}] closed.`)
+        delete this.channels[dc.label]
+      })
+      on(dc, 'message', event => {
+        this.emit('message', {
+          channel: dc.label,
+          data: event.data
+        })
+      })
     }
   }
 }
