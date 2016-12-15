@@ -1,13 +1,15 @@
-
 let wrtc = require('wrtc')
 let express = require('express')
 let bodyParser = require('body-parser')
+let path = require('path')
 
 let {
   RTCPeerConnection,
   RTCSessionDescription,
   RTCIceCandidate
 } = wrtc
+
+let PORT = process.env.PORT || '8081'
 
 let app = express()
 let connections = {}
@@ -21,7 +23,7 @@ function doConnect (id, offer) {
     let dc = evt.channel
 
     dc.onopen = () => {
-      console.log("data channel opened")
+      console.log('data channel opened')
     }
     dc.onmessage = e => {
       console.log(e)
@@ -30,7 +32,7 @@ function doConnect (id, offer) {
   }
 
   pc.oniceconnectionstatechange = () => {
-    if(pc.iceConnectionState == 'disconnected') {
+    if (pc.iceConnectionState === 'disconnected') {
       console.log('Disconnected', id)
       delete connections[id]
     }
@@ -46,7 +48,7 @@ pc.ondatachannel = evt => {
   let dc = evt.channel
 
   dc.onopen = () => {
-    console.log("data channel opened")
+    console.log('data channel opened')
   }
   dc.onmessage = e => {
     console.log(e)
@@ -55,7 +57,7 @@ pc.ondatachannel = evt => {
 }
 
 app.use(bodyParser.json())
-app.use(express.static(__dirname))
+app.use(express.static(path.join(__dirname, '..', 'assets')))
 
 app.post('/ice-candidate/:sesId', (req, res) => {
   if (!connections[req.params.sesId]) res.end()
@@ -78,5 +80,5 @@ app.post('/offer/:sesId', (req, res) => {
   })
 })
 
-
-app.listen(8081)
+console.log(`Starting application on port ${PORT}`)
+app.listen(PORT)
