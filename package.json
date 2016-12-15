@@ -21,7 +21,7 @@
     "standard": "^8.6.0"
   },
   "scripts": {
-    "start": "node ./src/server/index.js",
+    "start": "npm run build && node ./src/server/index.js",
     "develpoment": "nodemon server.js",
     "lint": "standard ./src/**/*.js",
     "build": "rollup -c"
