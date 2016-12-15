@@ -38,7 +38,11 @@ app.post('/offer/:sesId', (req, res) => {
 
   socket.on('message', msg => {
     console.log(msg)
-    socket.send(msg.channel, msg.data)
+    Object.keys(connections).forEach(k => {
+      let s = connections[k]
+
+      if (s !== socket) s.send(msg.channel, msg.data)
+    })
   })
 
   socket.receiveOffer(req.body).then(answer => {
