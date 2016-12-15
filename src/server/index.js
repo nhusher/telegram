@@ -14,46 +14,39 @@ let PORT = process.env.PORT || '8081'
 let app = express()
 let connections = {}
 
+function on (o, e, h) {
+  o.addEventListener(e, h)
+  return () => o.removeEventListener(e, h)
+}
+
 function doConnect (id, offer) {
   let pc = new RTCPeerConnection()
 
   connections[id] = pc
 
-  pc.ondatachannel = evt => {
+  on(pc, 'datachannel', evt => {
     let dc = evt.channel
 
-    dc.onopen = () => {
+    on(dc, 'open', () => {
       console.log('data channel opened')
-    }
-    dc.onmessage = e => {
+    })
+
+    on(dc, 'message', e => {
       console.log(e)
       dc.send('pong')
-    }
-  }
+    })
+  })
 
-  pc.oniceconnectionstatechange = () => {
+  on(pc, 'iceconnectionstatechange', e => {
     if (pc.iceConnectionState === 'disconnected') {
       console.log('Disconnected', id)
       delete connections[id]
     }
-  }
+  })
 
   return pc.setRemoteDescription(new RTCSessionDescription(offer))
     .then(() => pc.createAnswer())
     .then(answer => pc.setLocalDescription(answer).then(() => answer))
-}
-
-let pc = new RTCPeerConnection()
-pc.ondatachannel = evt => {
-  let dc = evt.channel
-
-  dc.onopen = () => {
-    console.log('data channel opened')
-  }
-  dc.onmessage = e => {
-    console.log(e)
-    dc.send('pong')
-  }
 }
 
 app.use(bodyParser.json())
