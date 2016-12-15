@@ -1,53 +1,20 @@
-let wrtc = require('wrtc')
+let server = require('http').createServer()
+let WebSocketServer = require('ws').Server
 let express = require('express')
 let bodyParser = require('body-parser')
 let path = require('path')
-
-let {
-  RTCPeerConnection,
-  RTCSessionDescription,
-  RTCIceCandidate
-} = wrtc
+let RtcSocket = require('./RtcSocket')
 
 let PORT = process.env.PORT || '8081'
 
+let wss = new WebSocketServer({ server })
 let app = express()
+
 let connections = {}
 
-function on (o, e, h) {
-  o.addEventListener(e, h)
-  return () => o.removeEventListener(e, h)
-}
-
-function doConnect (id, offer) {
-  let pc = new RTCPeerConnection()
-
-  connections[id] = pc
-
-  on(pc, 'datachannel', evt => {
-    let dc = evt.channel
-
-    on(dc, 'open', () => {
-      console.log('data channel opened')
-    })
-
-    on(dc, 'message', e => {
-      console.log(e)
-      dc.send('pong')
-    })
-  })
-
-  on(pc, 'iceconnectionstatechange', e => {
-    if (pc.iceConnectionState === 'disconnected') {
-      console.log('Disconnected', id)
-      delete connections[id]
-    }
-  })
-
-  return pc.setRemoteDescription(new RTCSessionDescription(offer))
-    .then(() => pc.createAnswer())
-    .then(answer => pc.setLocalDescription(answer).then(() => answer))
-}
+wss.on('connection', ws => {
+  console.log('connected', ws)
+})
 
 app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, '..', 'assets')))
@@ -57,21 +24,31 @@ app.post('/ice-candidate/:sesId', (req, res) => {
 
   let pc = connections[req.params.sesId]
 
-  pc.addIceCandidate(new RTCIceCandidate(req.body))
-    .then(r => {
-      res.end()
-    }, e => {
-      console.error(e)
-      res.end()
-    })
+  pc.addIceCandidate(req.body).then(r => {
+    res.end()
+  }, e => {
+    console.error(e)
+    res.end()
+  })
 })
 
 app.post('/offer/:sesId', (req, res) => {
-  doConnect(req.params.sesId, req.body).then(answer => {
+  let socket = new RtcSocket()
+  connections[req.params.sesId] = socket
+
+  socket.on('message', msg => {
+    console.log(msg)
+  })
+
+  socket.receiveOffer(req.body).then(answer => {
     res.json(answer)
+    res.end()
+  }).catch(err => {
+    console.log(err)
     res.end()
   })
 })
 
 console.log(`Starting application on port ${PORT}`)
-app.listen(PORT)
+server.on('request', app)
+server.listen(PORT)
